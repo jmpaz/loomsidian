@@ -1240,6 +1240,7 @@ export default class LoomPlugin extends Plugin {
 	  "openai-chat": this.completeOpenAIChat,
 	  azure: this.completeAzure,
 	  "azure-chat": this.completeAzureChat,
+	  together: this.completeTogether,
 	};
 	let result;
 	try {
@@ -1472,6 +1473,41 @@ export default class LoomPlugin extends Plugin {
 	}
 	return result;
   }
+
+	async completeTogether(prompt: string) {
+	  const preset = getPreset(this.settings);
+	  const config = {
+		prompt,
+		max_tokens: this.settings.maxTokens,
+		temperature: this.settings.temperature,
+		top_p: this.settings.topP,
+		frequency_penalty: this.settings.frequencyPenalty,
+		presence_penalty: this.settings.presencePenalty,
+		model: preset.model,
+	  };
+
+	  const completions: string[] = [];
+	  for (let i = 0; i < this.settings.n; i++) {
+		const response = await requestUrl({
+		  url: "https://api.together.xyz/v1/completions",
+		  method: "POST",
+		  headers: {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${preset.apiKey}`,
+		  },
+		  throw: false,
+		  body: JSON.stringify(config),
+		});
+
+		if (response.status === 200) {
+		  completions.push(response.json.choices[0].text);
+		} else {
+		  return { ok: false, status: response.status, message: response.text };
+		}
+	  }
+
+	  return { ok: true, completions };
+	}
 
   async loadSettings() {
     const settings = (await this.loadData())?.settings || {};
@@ -1714,6 +1750,7 @@ class LoomSettingTab extends PluginSettingTab {
 	  	  "openai-chat": "OpenAI (Chat)",
 	  	  azure: "Azure",
 	  	  "azure-chat": "Azure (Chat)",
+	  	  together: "Together",
 	    };
 	    dropdown.addOptions(options);
 	    dropdown.setValue(this.plugin.settings.modelPresets[this.plugin.settings.modelPreset].provider);
