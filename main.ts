@@ -1501,6 +1501,9 @@ export default class LoomPlugin extends Plugin {
 
 		if (response.status === 200) {
 		  completions.push(response.json.choices[0].text);
+		} else if (response.status === 429) {
+		  await new Promise((resolve) => setTimeout(resolve, 1000));
+		  i--;
 		} else {
 		  return { ok: false, status: response.status, message: response.text };
 		}
